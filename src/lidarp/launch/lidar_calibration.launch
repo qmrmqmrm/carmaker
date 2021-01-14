@@ -1,0 +1,14 @@
+<launch>
+  <node pkg="point2" name="point2_front" type="point2_front"/>
+
+  <node pkg="point2" name="point2_left" type="point2_left"/>
+
+  <node pkg="point2" name="point2_right" type="point2_right"/>
+
+  <node pkg="lidarp" name="cali_left" type="cali_left"/>
+
+  <node pkg="lidarp" name="cali_right" type="cali_right"/>
+  <node pkg="lidarp" name="lidar_calib" type="lidar_calib"/>
+
+
+</launch>
