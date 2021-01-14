@@ -1,0 +1,97 @@
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <velodyne_pointcloud/point_types.h>
+#include <pcl/common/common.h>
+#include <pcl/common/centroid.h>
+#include <pcl/common/transforms.h>
+#include <pcl/console/parse.h>
+#include <set>
+#include <pcl/io/pcd_io.h>
+#include <boost/format.hpp>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Cholesky>
+#define VPoint velodyne_pointcloud::PointXYZIR
+#define Point2 pcl::PointXYZI
+#define PI 3.14159265359
+//	-0.26846	-0.962614	0.0360994	-1.71302
+//	0.963166	-0.268841	-0.00604979	0.885978
+//	0.0155286	0.0331456	0.99933		0.19213
+using namespace std;
+
+ros::Publisher pub1;
+
+float theta_r = 180 * M_PI/ 180; // 라디안 각도로 회전 (180도 회전)
+
+void input(const sensor_msgs::PointCloud2ConstPtr& scan)
+{
+
+    // Msg to pointcloud
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::fromROSMsg(*scan,*cloud); // ros msg 에서 pcl cloud 데이터로 변환
+
+    //회전변환행렬
+//	Eigen::MatrixXd transform_1 = Eigen::MatrixXd::Identity();
+    Eigen::MatrixXf transform_1(4,4);
+    transform_1 (0,0) = -0.26846;
+    transform_1 (0,1) = -0.962614;
+    transform_1 (0,2) = 0.0360994;
+    transform_1 (0,3) = -1.71302;
+    transform_1 (1,0) = 0.963166;
+    transform_1 (1,1) = -0.268841;
+    transform_1 (1,2) = -0.00604979;
+	transform_1 (1,3) = 0.885978;
+    transform_1 (2,0) = 0.0155286;
+    transform_1 (2,1) = 0.0331456;
+    transform_1 (2,2) = 0.99933;
+	transform_1 (2,3) = 0.19213;
+    transform_1 (3,0) = 1;
+    transform_1 (3,1) = 1;
+    transform_1 (3,2) = 1;
+    transform_1 (3,3) = 1;
+    //    (row, column)
+//	std::cout << transform_1(0,0);
+//	std::cout << transform_1(0,1);
+//	std::cout << transform_1(0,2);
+//	std::cout << transform_1(0,3);
+//	std::cout << transform_1(1,0);
+//	std::cout << transform_1(1,1);
+//	std::cout << transform_1(1,2);
+//	std::cout << transform_1(1,3);
+//	std::cout << transform_1(2,0);
+//	std::cout << transform_1(2,1);
+//	std::cout << transform_1(2,2);
+//	std::cout << transform_1(2,3);
+	std::cout << transform_1(3,0);
+    // Executing the transformation
+    pcl::PointCloud<pcl::PointXYZI>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZI> ());
+    pcl::transformPointCloud (*cloud, *transformed_cloud, transform_1);
+
+    pcl::PCLPointCloud2 cloud_p;
+    pcl::toPCLPointCloud2(*transformed_cloud, cloud_p); 
+
+    sensor_msgs::PointCloud2 output;
+    pcl_conversions::fromPCL(cloud_p, output);
+    
+    pub1.publish(output);
+}
+
+
+int main(int argc, char** argv)
+{
+	ros::init(argc, argv, "input");
+	ros::NodeHandle nh;
+	ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> ("/dg_left", 100, input); //front ouster
+	pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/left_velodyne_points_rotated", 100);
+	ros::spin();
+}
