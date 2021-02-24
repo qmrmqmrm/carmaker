@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="lidarp" name="cali_left" type="cali_left"/>
+
+  <node pkg="lidarp" name="cali_right" type="cali_right"/>
+  <node pkg="lidarp" name="lidar_calib" type="lidar_calib"/>
+
+
+</launch>

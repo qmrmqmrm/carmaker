@@ -1,0 +1,8 @@
+<launch>
+
+
+  <include file="$(find lidarp)/launch/lidar_calibration.launch"/>
+  <include file="$(find carmaker_node)/launch/multi_filter.launch"/>
+  <include file="$(find carmaker_tracking)/launch/lidar_traker.launch"/>
+
+</launch>

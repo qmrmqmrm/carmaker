@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+
+    <node pkg="carmaker_tracking" type="flag_node" name="flag" />
+    <node pkg="carmaker_tracking" type="carmaker_tracking_node" name="example" />
+
+    <!-- Setup tracking Algorithm parameter -->
+    <param name="cluster_value_" type="double" value="0.5" />
+    <param name="centroid_distance_" type="double" value="1.6" />
+    <param name="voxel_leaf_size_" type="double" value="0.1" />
+    
+
+</launch>
