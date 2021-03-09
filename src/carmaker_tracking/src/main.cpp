@@ -91,14 +91,14 @@ public:
 
             if(limit_signal == "left") {
 
-                if(data.y < 2.0) {
+                if(data.y < 0 ) {
 
                     pub_information.publish(msg);
                 }
             }
             else if(limit_signal == "right") {
 
-                if(data.y > -2.0) {
+                if(data.y > 0) {
 
                     pub_information.publish(msg);
                 }
@@ -117,13 +117,13 @@ public:
         carmaker_tracking::emergency_state emergency_msg;
         carmaker_tracking::Front_vehicle_state msg;
 
-        if( centroid.y <= 2 & centroid.y >= -2
+        if( centroid.y <= 2 & centroid.y >= -2 
                 & centroid.x > 0 & centroid.x < 50) {
             // std::cout<<"Vehicle in front"<<std::endl;
 
             msg.x = centroid.x, msg.y = centroid.y, msg.distance = distance_, msg.intensity = centroid.intensity;
             util.waittTimeReset();
-
+            
             if(distance_ > 50) {
                 //  Normal mode
                 emergency_msg.state = 0;
@@ -140,7 +140,7 @@ public:
                 // util.delay = util.delay + 1;
                 // std::cout<<"delay"<<util.delay<<std::endl;
                 util.dealyCount();
-                if(util.delay == 150) {
+                if(util.delay == 200) {
                     util.initCount();
                     std::cout<<"Go!"<<std::endl;
                     emergency_msg.state = 3;
@@ -155,8 +155,6 @@ public:
             // std::cout<<"without"<<std::endl;
             util.waitTime(emergency_msg, emgergency_stop_pub);
         }
-
-
     }
 
     
@@ -164,7 +162,6 @@ public:
     {
 
         //set variable and convert ros msg
-
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new  pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -173,7 +170,6 @@ public:
 
 
         //Point roi & Point projection
-
         output_cloud = util.point_roi(cloud);
         projection_cloud = util.point_projection(output_cloud);
 
@@ -201,15 +197,6 @@ public:
         // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
         pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>);
         tree->setInputCloud(projection_cloud);
-
-        // std::vector<pcl::PointIndices> cluster_indices;
-        // pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-        // ec.setClusterTolerance(cluster_value);
-        // ec.setMinClusterSize(5);
-        // ec.setMaxClusterSize(300);
-        // ec.setSearchMethod(tree);
-        // ec.setInputCloud(projection_cloud);
-        // ec.extract(cluster_indices);
 
         std::vector<pcl::PointIndices> cluster_indices;
         pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
@@ -259,7 +246,7 @@ public:
         // output_clustered.header.frame_id = "velodyne";
         output_clustered.header.frame_id = "VLP16_Front";
         pub.publish(output_clustered);
-        final_cloud.clear();
+
 
 
         pcl::PCLPointCloud2 center_cloud;
@@ -269,7 +256,7 @@ public:
         // center.header.frame_id = "velodyne";
         center.header.frame_id = "VLP16_Front";
         pub2.publish(center); 
-        util.outCloud.clear();
+
 
         pcl::PCLPointCloud2 kalman_predict;
         pcl::toPCLPointCloud2(util.outKalman, kalman_predict);
@@ -280,47 +267,21 @@ public:
         pub3.publish(kalman_center); 
 
         pcl::PointCloud<pcl::PointXYZI> minmax_test;
-        for (int i =0 ; i <util.outKalman.size(); i++) {
+        for (int i =0 ; i <util.outCloud.size(); i++) {
             
             Eigen::Vector4f min;
             Eigen::Vector4f max;
-            // pcl::PointXYZI test_point1;
-            // pcl::PointXYZI test_point2;
 
-            drawMarker(util.outMinMax.at(i), util.outKalman.at(i), util.distanceVector.at(i), i);
-            publishClusterInformation(util.outKalman.at(i), util.distanceVector.at(i));
-            // pcl::getMinMax3D(util.outMinMax.at(i), min, max);
-            // test_point1.x = 0, test_point1.y = 0, test_point1.z = 0;
-            // test_point2.x = 2, test_point2.y = -1, test_point2.z = 0;
+            // drawMarker(util.outMinMax.at(i), util.outCloud.at(i), util.distanceVector.at(i), i);
+            publishClusterInformation(util.outCloud.at(i), util.distanceVector.at(i));
+            verifyState(util.outCloud.at(i), util.distanceVector.at(i));
         }
-
-
-        //for start alert
-
-        for (int i =0 ; i <util.outKalman.size(); i++) {
-            
-            Eigen::Vector4f min;
-            Eigen::Vector4f max;
-            // pcl::PointXYZI test_point1;
-            // pcl::PointXYZI test_point2;
-
-            drawMarker(util.outMinMax.at(i), util.outKalman.at(i), util.distanceVector.at(i), i);
-            verifyState(util.outKalman.at(i), util.distanceVector.at(i));
-
-        }
-
 
 
         util.outKalman.clear();
         util.distanceVector.clear();
-
-        // pcl::PCLPointCloud2 test;
-        // pcl::toPCLPointCloud2(minmax_test, test);
-        // sensor_msgs::PointCloud2 test_minmax; 
-        // pcl_conversions::fromPCL(test, test_minmax);
-        // test_minmax.header.frame_id = "velodyne";
-        // pub_test.publish(test_minmax); 
-        // minmax_test.clear();
+        util.outCloud.clear();
+        final_cloud.clear();
 
     }
 

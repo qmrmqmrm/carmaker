@@ -118,7 +118,7 @@ public:
 
     void waitTime( carmaker_tracking::emergency_state msg, ros::Publisher pub) {
         wait += 1;
-        if(wait == 400) {
+        if(wait == 200) {
             std::cout<<"Reset!!!!!!!!!!!!!!!!!!!!!!!!!!"<<std::endl;
             wait = 0;
             msg.state = 0;
@@ -188,28 +188,6 @@ public:
 
         return out_cloud;
     }
-
-
-
-    // pcl::PointXYZI selectNumber(pcl::PointCloud<pcl::PointXYZI> cloud, int mode)
-    // {
-    //     // pcl::PointCloud<pcl::PointXYZI>::Ptr tempPoint(new pcl::PointCloud<pcl::PointXYZI>);
-    //     pcl::PointXYZI outpoint;
-    //     Eigen::Vector4f centroid;
-    //     // tempPoint->push_back(cloud);
-    //     pcl::compute3DCentroid(cloud, centroid);
-
-    //     std::cout<<"center point:"<<centroid<<std::endl;
-
-    //     outpoint.x = centroid[0], outpoint.y = centroid[1], outpoint.z = centroid[2], outpoint.intensity = 5;
-    //     pre_value.push_back(outpoint);
-    //     std::cout<<"pre_value:"<<pre_value.size()<<std::endl;
-    //     std::cout<<"pre_value:"<<pre_value.back()<<std::endl;
-    //     std::cout<<"pre_value:"<<pre_value.front()<<std::endl;
-
-    //     return outpoint;
-
-    // }
 
     visualization_msgs::Marker mark_centroid(std_msgs::Header header, Eigen::Vector4f centroid, Eigen::Vector4f min, Eigen::Vector4f max, std::string ns , double distance_, int id, float r, float g, float b)
     {
@@ -314,10 +292,8 @@ public:
                         outpoint.intensity = intensity;
                         new_outpoint.intensity = intensity;
                         outKalman.push_back(new_outpoint);
-                        outMinMax.push_back(vec[cl]);
-                        // drawMarker(vec[cl], new_outpoint, intensity);
-                        // kalmanPoint.intensity = intensity;
-                        // std::cout<<"kalman : "<<kalmanPoint<<std::endl;
+                        // outMinMax.push_back(vec[cl]);
+
                     }
 
                 }
@@ -362,7 +338,7 @@ public:
 
     float extractDistance() {
 
-        for( auto point : outKalman) {
+        for( auto point : outCloud) {
 
             double distance = pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2);
             distance = sqrt(distance);
