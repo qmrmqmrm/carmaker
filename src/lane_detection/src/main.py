@@ -91,7 +91,8 @@ class LaneDetect:
         # cv2.putText(color_img, f"offset:{curverad[2]:.2f}", (550, 650), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 2)
         for n, pix in enumerate(center_pix):
             bird_view_lane= cv2.line(bird_view_lane,(int(pix),n),(int(pix),n),(255,255,255),5)
-        # cv2.imshow("ss",cen_pixs)
+	# here        
+	# cv2.imshow("ss",cen_pixs)
         # cv2.imshow("original_frame", color_img)
         # cv2.imshow("test", bird_view_lane)
         # cv2.waitKey(33)
