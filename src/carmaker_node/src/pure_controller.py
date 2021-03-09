@@ -24,37 +24,36 @@ parameter
 
 class State:
 
-    def __init__(self, x=0.0, y=0.0, yaw=0.0, v=0.0):
+    def __init__(self, rear_tf, front_tf, x=0.0, y=0.0, yaw=0.0, v=0.0):
         self.x = x
         self.y = y
         self.yaw = yaw
         self.v = v
 
-        self.tm = np.array([[np.cos(self.yaw), -np.sin(self.yaw), self.x],
-                            [np.sin(self.yaw), np.cos(self.yaw), self.y],
-                            [0, 0, 1]])
+        # self.tm = np.array([[np.cos(self.yaw), -np.sin(self.yaw), self.x],
+        #                     [np.sin(self.yaw), np.cos(self.yaw), self.y],
+        #                     [0, 0, 1]])
 
-        self.rear_param = np.array([[0.79, 0, 1]]).T
-        self.front_param = np.array([[3.49, 0, 1]]).T
+        # self.rear_param = np.array([[0.79, 0, 1]]).T
+        # self.front_param = np.array([[3.49, 0, 1]]).T
 
-        self.WB = self.front_param[0] - self.rear_param[0]
+        # self.WB = self.front_param[0] - self.rear_param[0]
 
-        self.rear = np.dot(self.tm, self.rear_param)
-        self.front = np.dot(self.tm, self.front_param)
+        # self.rear = np.dot(self.tm, self.rear_param)
+        # self.front = np.dot(self.tm, self.front_param)
 
-        self.rear_x = self.rear[0]
-        self.rear_y = self.rear[1]
+        self.rear_x = rear_tf[0]
+        self.rear_y = rear_tf[1]
 
-        self.front_x = self.front[0]
-        self.front_y = self.front[1]
+        self.front_x = front_tf[0]
+        self.front_y = front_tf[1]
+
+        # self.WB = np.hypot((self.rear_x - self.front_x), (self.rear_y - self.front_y))
+        self.WB = 3.49 - 0.79
+        # 2.7
 
         self.car_dx = self.front_x - self.rear_x
         self.car_dy = self.front_y - self.rear_y
-
-        # self.rear_x = self.x + (rear_w * math.cos(self.yaw)) # rear wheel base of vehicle
-        # self.front_x = self.rear_x + (WB * math.cos(self.yaw)) # front wheel base of vehicle
-        # self.rear_y = self.y + (rear_w * math.sin(self.yaw)) # rear wheel base of vehicle
-        # self.front_y = self.rear_y + (WB * math.sin(self.yaw)) # front wheel base of vehicle
 
         self.turn = 0
         self.dt = 0
@@ -107,17 +106,26 @@ class TargetCourse:
 
         # To speed up nearest point search, doing it at only first time.
         if self.old_nearest_point_index is None:
+            print(self.cx)
             # search nearest point index
-            for ic in range(len(self.cx)):
-                dx = [state.rear_x - self.cx[ic]]
-                self.cx_list.append(dx)
-                dy = [state.rear_y - self.cy[ic]]
-                self.cy_list.append(dy)
-            d = np.hypot(self.cx_list, self.cy_list) # hypot : method of triangle
+            dx = state.rear_x - self.cx
+            dy = state.rear_y - self.cy
+
+            print(type(dx))
+            #
+            # for ic in range(len(self.cx)):
+            #     dx = [state.rear_x - self.cx[ic]]
+            #     self.cx_list.append(dx)
+            #     dy = [state.rear_y - self.cy[ic]]
+            #     self.cy_list.append(dy)
+
+            d = np.hypot(dx, dy) # hypot : method of triangle
+            print("d : ",d)
             ind = np.argmin(d) # minimum of d
 
             self.old_nearest_point_index = ind
             now_ind = ind
+
             # print("old_point : ", self.old_nearest_point_index)
         else:
 
@@ -152,6 +160,7 @@ class TargetCourse:
         # k = 1.6  # look forward gain
         Lfc = 2.0  # [m] look-ahead distance
         Lf = k * (state.v / 3.6) + Lfc  # update look ahead distance
+        # Lf = 5.0
 
         # search look ahead target point index
         while Lf > state.calc_distance(self.cx[ind], self.cy[ind]):
@@ -161,6 +170,8 @@ class TargetCourse:
             ind += 1
 
         Ld = state.calc_distance(self.cx[ind], self.cy[ind])
+        # Ld = Lf
+
         return ind, Ld, now_ind
 
 
@@ -171,19 +182,21 @@ class TargetCourse:
         car_fr = math.atan2(state.car_dy, state.car_dx)
         car_pr = math.atan2(Ld_dy, Ld_dx)
         alpha_m = (car_fr - car_pr)
-        alpha_m_d = alpha * (180 / math.pi)
+        alpha_m_d = alpha_m * (180 / math.pi)
 
         Ld_m = math.sqrt((Ld_dx ** 2) + (Ld_dy ** 2))
 
-        car_alpha_m = alpha - state.yaw
-        delta_m = math.atan2(2.0 * state.WB * math.sin(alpha_m) / Ld, 1.0)
+        car_alpha_m = alpha_m - state.yaw
+        delta_m = math.atan2(2.0 * state.WB * math.sin(alpha_m) / Ld_m, 1.0)
 
         return Ld_m, alpha_m
 
 
 
 def pure_pursuit_steer_control(state, trajectory, pind, Ks=0.08):
+    print("pure_steer",state.rear_x)
     ind, Ld, now_ind = trajectory.search_target_index(state)
+
 
     if pind >= ind:
         ind = pind
@@ -217,6 +230,7 @@ def pure_pursuit_steer_control(state, trajectory, pind, Ks=0.08):
     delta_m = delta_m_rad * (180 / math.pi)
     delta_m_gain = delta_m * Ks
 
+    # return delta_gain
     return delta_gain
 
 

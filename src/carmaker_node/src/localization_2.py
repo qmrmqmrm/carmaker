@@ -92,7 +92,7 @@ class Localization():
 		pubMsg = localization()
 		pubMsg.x = self.result_x
 		pubMsg.y = self.result_y
-		pubMsg.theta = self.Theta
+		pubMsg.theta = self.result_theta
 		self.localization_pub.publish(pubMsg)
 
 

@@ -51,9 +51,9 @@ def accs(distance_new, E_state, tar_vel_, cur_vel_, cur_dt, cfg, distance_old):
 	"""
 
 	Lights_Hazard = 0					# 비상등 off = 0, on = 1
-	e_distance = 10						# 비상거리
+	e_distance = 7						# 비상거리
 	a_v = cur_vel_ / 3.6				# km/h -> m/s
-	cfg.safe_distance = 15 		# 안전거리
+	cfg.safe_distance = 13 		# 안전거리
 	GearNo = 1
 
 	# 5m 안에 물체가 있을 경우 비상정지 == 안전거리를 침범
@@ -66,6 +66,7 @@ def accs(distance_new, E_state, tar_vel_, cur_vel_, cur_dt, cfg, distance_old):
 		cfg.state = 4
 		print("Deceleration")
 		GearNo = 1
+
 	elif cfg.safe_distance + 5 <= distance_new <= cfg.safe_distance + 15:
 		cfg.state = 3
 		print("Safe distance")

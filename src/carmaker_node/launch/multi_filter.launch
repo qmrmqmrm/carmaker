@@ -1,6 +1,9 @@
 <launch>
 
   <node pkg="carmaker_node" type="localization.py" name="localization"/>
+  <node pkg="carmaker_node" type="localization_2.py" name="localization_2"/>
+  <!--node pkg="carmaker_node" type="marker.py" name="marker"/-->
+
   <node pkg="carmaker_node" type="traffic_light.py" name="traffic_light"/>
   <node pkg="lane_detection" type="main.py" name="main"/>
   <!--node pkg="carmaker_node" type="local_path.py" name="local_path"/-->

@@ -3,20 +3,15 @@
 
 
 import rospy
-import message_filters
-from sensor_msgs.msg import *
 from carmaker_node.msg import *
 from carmaker_tracking.msg import *
-from nav_msgs.msg import *
 from config import Config
 
-import path_plann
-import sys, select, tty, termios
+from draw_marker import Marker_Class
 import numpy as np
 import pandas as pd
 import math
-import matplotlib.pyplot as plt
-import csv
+
 from std_msgs.msg import *
 
 R = 6378.1  # Radius of the Earth
@@ -33,27 +28,33 @@ class local_path(object):
         self.path_x = []
         self.path_y = []
         self.lidar_path = []
-
+        self.marker = Marker_Class()
         self.em_state = 0
         # =========================================== #
-        self.path_start = False
+        self.path_start = 0
         self.send_count = 2.0
         self.objec =[]
-        self.path_make = 30
+        self.path_make = None
         self.play_list = []
         self.aroow_mode = 0
+        self.ob_right_dect = 0
+        self.ob_left_dect = 0
+        self.ob_l_dect = 0
         self.ob_r_dect = 0
-
+        self.guard_rail =[]
+        
+        
     def pub_msg(self):
         pubMsg = lo_point()
         pubMsg.x_point = self.path_x
         pubMsg.y_point = self.path_y
         pubMsg.state = self.send_count
-
+        self.marker.init_markers(self.path_x,self.path_y)
         self.lo_point_pub.publish(pubMsg)
+        
         self.path_x= []
         self.path_y =[]
-        self.path_start = False
+        self.path_start = 0
         self.send_count = 2.0
         self.ob_count = 0
 
@@ -62,21 +63,25 @@ class local_path(object):
         self.aroow_mode = 30
         self.play_list = []
         self.objec =[]
+        self.ob_right_dect = 0
+        self.ob_left_dect = 0
+        self.ob_l_dect = 0
         self.ob_r_dect = 0
-
+        self.guard_rail = []
+        
 
     def yellow(self, data):
         if data.data == "left":
-            self.path_make = 0
+            self.path_make = "right"
         if data.data == "right":
-            self.path_make = 1
+            self.path_make = "left"
         if data.data == "no":
-            self.path_make = 2
+            self.path_make = "no"
 
 
     def local_path_planning(self):
         #self.val_init()
-        rospy.Subscriber('/localization', localization, self.locali_sub)
+        rospy.Subscriber('/localization_2', localization_2, self.locali_sub)
         rospy.Subscriber('/udp', UDP, self.udp_sub)
         rospy.Subscriber('/axis_distance_msg', pointInformationarray, self.lidar_point_op)
         rospy.Subscriber('/Emergency_state', emergency_state, self.emer_state_sub)
@@ -84,7 +89,7 @@ class local_path(object):
         rospy.Subscriber('/yellow_lane', String, self.yellow)
         self.lo_point_pub = rospy.Publisher('/lo_point', lo_point, queue_size=10)
 
-        if self.path_start == True:
+        if self.path_start == 1:
             print("start local path")
             self.send_count = 0.0
             
@@ -103,9 +108,10 @@ class local_path(object):
                 min_y = self.lidar_path[i, 1]
 
                 self.min_path(min_x, min_y)
-           
-            self.pub_msg()
 
+            self.pub_msg()
+            
+            
 
     
     def delete_point(self):
@@ -184,7 +190,14 @@ class local_path(object):
 
         self.pule_x = global_list_x[a] - global_list_x[a - 1]
         self.pule_y = global_list_y[a] - global_list_y[a - 1]
+        
+        for i in range(9):
+            self.guard_xy = [global_list_x[a + i], global_list_x[a + i]]
+            self.guard_rail.append(self.guard_xy)
 
+            # print("csv_global",self.guard_rail)
+            
+            
     def min_path(self, min_x, min_y):
         tngkr = []
 
@@ -204,49 +217,74 @@ class local_path(object):
 
 
     def lidar_point_op(self, data):
-        if self.path_start == True:
+        if self.path_start == 1:
             if data.points[0].distance < 20:
                 self.lidar_dis = data.points[0].distance
                 self.lidar_op_x = data.points[0].x
                 self.lidar_op_y = data.points[0].y
-
+                
                 self.xy = [self.lidar_op_x, self.lidar_op_y]
                 if self.ob_count < 10:
+                    if -5 < self.lidar_op_y <= -2:
+                        self.ob_right_dect = self.ob_right_dect + 1
+                        
+                    if 2 <= self.lidar_op_y < 5:
+                        self.ob_left_dect = self.ob_left_dect + 1
                     self.ob_lidar.append(self.xy)
 
                 self.ob_count += 1
                 self.objec = np.array(self.ob_lidar)
-                if -2 <= self.lidar_op_y <= 2 and -4 <= self.lidar_op_x <= 10:
+                if -1.5 <= self.lidar_op_y <= 1.5 and -4.0 <= self.lidar_op_x <= 10.0:
                     self.aroow_mode = 0
                 else:
                     self.aroow_mode = 1
-
+                '''
                 if -5 < self.lidar_op_y <= -2:
                     self.ob_r_dect = 1 ## right dect
-                elif 2 <= self.lidar_op_y < 5:
-                    self.ob_r_dect = 0  ## left dect
-                
+                else :
+                    self.ob_r_dect = 0
+                if 2 <= self.lidar_op_y < 5:
+                    self.ob_l_dect = 1  ## left dect
+                else :
+                    self.ob_l_dect = 0
+                '''
+                if self.ob_right_dect > 0:
+                    self.ob_r_dect = 1
+                if self.ob_left_dect > 0:
+                    self.ob_l_dect = 1
+
+                self.path_start = 2
+                    
     def lidar_real_point(self):
-        
-        if self.path_make == 1 : # path make left
-            self.play_list = [[3.0, 3.0], [5.0, 1.5], [7.0, 1.5], [9.0, 1.5], [11.0, 1.5], [13.0, 1.5], [15.0, 1.5]]
+        print((self.guard_rail))
+        if self.path_make == "left" : # path make left
+            if self.ob_r_dect == 1 and self.ob_l_dect == 1:
+                self.play_list = self.guard_rail
+                print("1",self.play_list)
+            else :
+                self.play_list = [[3.0, 3.0], [5.0, 3.0], [7.0, 3.0], [9.0, 2.0], [11.0, 2.0], [13.0, 2.0], [15.0, 2.0]]
+                print("21", self.play_list)
             
-        elif self.path_make == 0: # path make right
-            self.play_list = [[3.0, -1.5], [5.0, -1.5], [7.0, -1.5], [9.0, -1.5], [11.0, -1.5], [13.0, -1.5],[15.0, -1.5]]
-            
+        elif self.path_make == "right" : # path make right
+            self.play_list = [[3.0, -2.0], [5.0, -2.0], [7.0, -2.0], [9.0, -2.0], [11.0, -2.0], [13.0, -2.0],[15.0, -2.0]]
+            print("3", self.play_list)
         elif self.aroow_mode == 1: # guqfh
             self.play_list = [[10.0, 0.0],[10.0, 0.0],[10.0, 0.0],[10.0, 0.0], [10.0, 0.0]]
-            
-        elif self.path_make == 2 :
+            print("4", self.play_list)
+        elif self.path_make == "no" :
+            #if self.ob_r_dect == 1 and self.ob_l_dect == 1:   
             if self.ob_r_dect == 1 :## right dect
-                self.play_list = [[3.0, 3.0], [5.0, 1.5], [7.0, 1.5], [9.0, 1.5], [11.0, 1.5], [13.0, 1.5], [15.0, 1.5]]
-            elif self.ob_r_dect == 0 :## left dect
+                self.play_list = [[3.0, 3.0], [5.0, 3.0], [7.0, 3.0], [9.0, 2.0], [11.0, 2.0], [13.0, 2.0], [15.0, 2.0]]
+                print("6", self.play_list)
+            else :## left dect
                 self.play_list = [[3.0, -1.5], [5.0, -1.5], [7.0, -1.5], [9.0, -1.5], [11.0, -1.5], [13.0, -1.5]]
-            else :
-                self.play_list = [[3.0, -1.5], [5.0, -1.5], [7.0, -1.5], [9.0, -1.5], [11.0, -1.5], [13.0, -1.5]]
-
+                print("3434", self.play_list)
+        else :
+            self.play_list = self.guard_rail
+            print("play_list", self.play_list)
+        print("play_list_out", self.play_list)
         yaw = self.car_point_theta
-        print(self.path_make)
+
         for x, y in self.play_list:
             b = np.array([x, y, 1])
             yaw_matrix = np.array([
@@ -259,6 +297,7 @@ class local_path(object):
             real_op_x = result[0]
             real_op_y = result[1]
             a = [real_op_x, real_op_y]
+
             self.lidar_path.append(a)
 
 
@@ -274,15 +313,21 @@ class local_path(object):
 
     def emer_state_sub(self, state):
         self.em_state = state.state
-
         if self.em_state == 3:
-            self.path_start = True
+            self.path_start = 1
+           
+        
+        if self.em_state < 2 and self.path_start == 2 :
+            self.path_start = 0
+            self.lidar_path = []
+            self.send_count = 1
+            self.pub_msg()
 
 
     def local_end_state(self, data):
         self.local_end = data.state
         if self.local_end == 1:
-            self.path_start = False
+            self.path_start = 0
             self.lidar_path = []
             self.send_count = 1
             self.pub_msg()

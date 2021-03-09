@@ -17,7 +17,7 @@ class Config():
 
 		# option - default
 		self.safe_distance = 7  	# 안전거리 기본값
-		self.set_distance = 50		# 라이다 검출 시작 기본 거리
+		self.set_distance = 45		# 라이다 검출 시작 기본 거리
 		self.state = 0				# 차량의 상태
 		self.acc_v = 0				# 앞 차의 속도
 		self.acc_t = 0				# 앞 차의 안전거리에 도달하는 시간
